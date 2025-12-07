@@ -5,35 +5,27 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductRequest;
 use App\Http\Resources\ProductResource;
-use App\Models\Product;
+use App\Services\ProductService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    
+    public function __construct(
+        private ProductService $productService
+    ) {
+    }
 
     public function index(Request $request): JsonResponse
     {
-        $query = Product::query();
+        $filters = [
+            'search' => $request->get('search'),
+            'sort_by' => $request->get('sort_by', 'id'),
+            'sort_order' => $request->get('sort_order', 'desc'),
+            'per_page' => $request->get('per_page', 15),
+        ];
 
-        // Search functionality
-        if ($request->has('search')) {
-            $search = $request->get('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
-            });
-        }
-
-        // Sorting
-        $sortBy = $request->get('sort_by', 'id');
-        $sortOrder = $request->get('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
-
-        // Pagination
-        $perPage = $request->get('per_page', 15);
-        $products = $query->paginate($perPage);
+        $products = $this->productService->getAllProducts($filters);
 
         return response()->json([
             'message' => 'Products retrieved successfully',
@@ -47,11 +39,9 @@ class ProductController extends Controller
         ]);
     }
 
-
-
     public function store(ProductRequest $request): JsonResponse
     {
-        $product = Product::create($request->validated());
+        $product = $this->productService->createProduct($request->validated());
 
         return response()->json([
             'message' => 'Product created successfully',
@@ -59,11 +49,9 @@ class ProductController extends Controller
         ], 201);
     }
 
-
-
     public function show(string $id): JsonResponse
     {
-        $product = Product::findOrFail($id);
+        $product = $this->productService->getProductById((int) $id);
 
         return response()->json([
             'message' => 'Product retrieved successfully',
@@ -71,24 +59,19 @@ class ProductController extends Controller
         ]);
     }
 
-
-
     public function update(ProductRequest $request, string $id): JsonResponse
     {
-        $product = Product::findOrFail($id);
-        $product->update($request->validated());
+        $product = $this->productService->updateProduct((int) $id, $request->validated());
 
         return response()->json([
             'message' => 'Product updated successfully',
-            'data' => new ProductResource($product->fresh()),
+            'data' => new ProductResource($product),
         ]);
     }
 
-
     public function destroy(string $id): JsonResponse
     {
-        $product = Product::findOrFail($id);
-        $product->delete();
+        $this->productService->deleteProduct((int) $id);
 
         return response()->json([
             'message' => 'Product deleted successfully',
