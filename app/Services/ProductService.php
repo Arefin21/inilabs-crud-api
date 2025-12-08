@@ -7,6 +7,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ProductService
 {
+
     public function getAllProducts(array $filters = []): LengthAwarePaginator
     {
         $query = Product::query();
@@ -26,7 +27,8 @@ class ProductService
         $query->orderBy($sortBy, $sortOrder);
 
         // Pagination
-        $perPage = $filters['per_page'] ?? 15;
+        $perPage = $filters['per_page'] ?? 2;
+
 
         return $query->paginate($perPage);
     }
